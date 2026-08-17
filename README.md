@@ -21,8 +21,14 @@ stack. More information on this topic can be found in the ALGORITHM file.
 With [Homebrew](https://brew.sh):
 
 ```sh
+brew trust --formula caius72/lbzip2/lbzip2
 brew install caius72/lbzip2/lbzip2
 ```
+
+Homebrew refuses to load formulae from third-party taps until they are trusted.
+Installing by the fully qualified name above trusts this one implicitly, so the
+first command is only strictly needed if you tap first and then install
+`lbzip2` by its short name; running it up front does no harm either way.
 
 Homebrew core also ships an `lbzip2` formula, built from upstream 2.5. Only one
 of the two can be installed at a time, so run `brew uninstall lbzip2` first if
