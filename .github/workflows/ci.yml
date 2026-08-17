@@ -10,6 +10,9 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell || 'bash' }}
     strategy:
       fail-fast: false
       matrix:
@@ -21,12 +24,25 @@ jobs:
             container: alpine:latest
           - name: macos
             os: macos-latest
+          # lbzip2 needs fork(), sigaction(), futimens() and sysconf(), none of
+          # which native Win32 provides, so this builds against the MSYS2
+          # runtime rather than MinGW.  See kjn/lbzip2#16.
+          - name: windows-msys
+            os: windows-latest
+            shell: 'msys2 {0}'
     steps:
       # The GitHub-hosted images already provide cmake, a C compiler and make;
       # only the bare Alpine image needs anything installed.
       - name: Install dependencies
         if: matrix.container
         run: apk add --no-cache build-base cmake git
+      - name: Set up MSYS2
+        if: matrix.name == 'windows-msys'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          update: true
+          install: gcc cmake make
       - name: Checkout source
         uses: actions/checkout@v7
       - name: Configure
@@ -38,6 +54,8 @@ jobs:
       - name: Check install
         run: |
           cmake --install build --prefix "$PWD/stage"
-          test -x stage/bin/lbzip2
+          bin=stage/bin/lbzip2
+          [ -x "$bin" ] || bin="$bin.exe"
+          test -x "$bin"
           test -f stage/share/man/man1/lbzip2.1
-          stage/bin/lbzip2 --version
+          "$bin" --version
