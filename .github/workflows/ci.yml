@@ -7,18 +7,28 @@ on:
   workflow_dispatch:
 jobs:
   build:
-    name: ${{ matrix.os }}
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
+        include:
+          - name: linux-glibc
+            os: ubuntu-latest
+          - name: linux-musl
+            os: ubuntu-latest
+            container: alpine:latest
+          - name: macos
+            os: macos-latest
     steps:
+      # The GitHub-hosted images already provide cmake, a C compiler and make;
+      # only the bare Alpine image needs anything installed.
+      - name: Install dependencies
+        if: matrix.container
+        run: apk add --no-cache build-base cmake git
       - name: Checkout source
         uses: actions/checkout@v4
-      - name: Install dependencies
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y cmake gcc make
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
       - name: Build
