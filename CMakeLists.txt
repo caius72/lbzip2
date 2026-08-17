@@ -31,6 +31,13 @@ set(SRC_FILES
 add_executable(lbzip2 ${SRC_FILES})
 target_link_libraries(lbzip2 PRIVATE Threads::Threads)
 
+# ponytail: _XOPEN_SOURCE=700 puts macOS headers in strict-POSIX mode, which
+# hides st_?timespec and _SC_NPROCESSORS_ONLN.  Scoped to this target because
+# the test driver needs strict mode for SIGPOLL, which _DARWIN_C_SOURCE hides.
+if(APPLE)
+    target_compile_definitions(lbzip2 PRIVATE _DARWIN_C_SOURCE)
+endif()
+
 enable_testing()
 add_executable(driver tests/driver.c)
 add_executable(minbzcat tests/minbzcat.c)

@@ -888,8 +888,14 @@ output_regf_uninit(int outfd, const struct stat *sbuf)
   {
     struct timespec ts[2];
 
+#ifdef __APPLE__
+    /* ponytail: macOS spells the struct stat timespecs st_?timespec. */
+    ts[0] = sbuf->st_atimespec;
+    ts[1] = sbuf->st_mtimespec;
+#else
     ts[0] = sbuf->st_atim;
     ts[1] = sbuf->st_mtim;
+#endif
 
     if (-1 == futimens(outfd, ts)) {
       warnx(errno, "futimens(\"%s\")", opathn);
