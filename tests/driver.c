@@ -59,7 +59,7 @@ xprintf(const char *fmt, ...)
 
 
 /* Bail out current test suite with given message. */
-static void
+_Noreturn static void
 t_error(const char *fmt, ...)
 {
   va_list ap;
