@@ -9,12 +9,42 @@
 Copyright (C) 2011, 2012, 2013, 2014, 2015 Mikolaj Izdebski  
 Copyright (C) 2008, 2009, 2010 Laszlo Ersek
 
-This README file is part of lbzip2 version 2.5.
+This README file is part of lbzip2 version 2.6.1.
 
 lbzip2 is a parallel, SMP-based, bzip2-compatible compression utility.
 
 lbzip2 compresses and decompresses files using a variation of BWT compression
 stack. More information on this topic can be found in the ALGORITHM file.
+
+## Installation
+
+With [Homebrew](https://brew.sh):
+
+```sh
+brew install caius72/lbzip2/lbzip2
+```
+
+Homebrew core also ships an `lbzip2` formula, built from upstream 2.5. Only one
+of the two can be installed at a time, so run `brew uninstall lbzip2` first if
+you already have it.
+
+From source, with CMake 3.15 or newer and a C99 compiler:
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+ctest --test-dir build      # optional, 1111 tests
+cmake --install build       # honours --prefix and DESTDIR
+```
+
+Installing places `lbzip2` in `bin` and the three manual pages in `share/man`.
+The `lbunzip2` and `lbzcat` modes are selected by the name lbzip2 is invoked
+under, so create them as symlinks to the installed binary:
+
+```sh
+ln -s lbzip2 <prefix>/bin/lbunzip2
+ln -s lbzip2 <prefix>/bin/lbzcat
+```
 
 lbzip2 is free software: you can redistribute it and/or modify it under the
 terms of the GNU General Public License as published by the Free Software
