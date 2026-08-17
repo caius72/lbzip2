@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(lbzip2 C)
+project(lbzip2 VERSION 2.6 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -8,7 +8,7 @@ add_compile_definitions(
     _XOPEN_SOURCE=700
     _FILE_OFFSET_BITS=64
     PACKAGE_NAME="lbzip2"
-    PACKAGE_VERSION="devel"
+    PACKAGE_VERSION="${PROJECT_VERSION}"
 )
 add_compile_options(-Wall -Wextra)
 
@@ -37,6 +37,11 @@ target_link_libraries(lbzip2 PRIVATE Threads::Threads)
 if(APPLE)
     target_compile_definitions(lbzip2 PRIVATE _DARWIN_C_SOURCE)
 endif()
+
+include(GNUInstallDirs)
+install(TARGETS lbzip2 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES man/lbzip2.1 man/lbunzip2.1 man/lbzcat.1
+        DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
 enable_testing()
 add_executable(driver tests/driver.c)
