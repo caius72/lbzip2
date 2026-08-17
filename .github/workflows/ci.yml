@@ -28,7 +28,7 @@ jobs:
         if: matrix.container
         run: apk add --no-cache build-base cmake git
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
       - name: Build
