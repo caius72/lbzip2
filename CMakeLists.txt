@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(lbzip2 VERSION 2.6 LANGUAGES C)
+project(lbzip2 VERSION 2.6.1 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -9,6 +9,7 @@ add_compile_definitions(
     _FILE_OFFSET_BITS=64
     PACKAGE_NAME="lbzip2"
     PACKAGE_VERSION="${PROJECT_VERSION}"
+    PACKAGE_URL="https://github.com/caius72/lbzip2"
 )
 add_compile_options(-Wall -Wextra)
 

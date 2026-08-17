@@ -243,7 +243,7 @@ l be replaced by `.tar'; other filenames\n                       will be suffi\
 xed with `.out'.\n"
 
 #define HELP_STRING "%s version %s\n%s\n\n%s%s",                        \
-    PACKAGE_NAME, PACKAGE_VERSION, "https://github.com/kjn/lbzip2",     \
+    PACKAGE_NAME, PACKAGE_VERSION, PACKAGE_URL,                        \
     "Copyright (C) 2011, 2012, 2013, 2014 Mikolaj Izdebski\n"           \
     "Copyright (C) 2008, 2009, 2010 Laszlo Ersek\n"                     \
     "\n"                                                                \
