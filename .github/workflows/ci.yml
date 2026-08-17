@@ -11,8 +11,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
     defaults:
+      # sh rather than bash: the Alpine image ships neither bash nor the
+      # automatic fallback that applies when no shell is named at all.
       run:
-        shell: ${{ matrix.shell || 'bash' }}
+        shell: ${{ matrix.shell || 'sh' }}
     strategy:
       fail-fast: false
       matrix:
