@@ -7,11 +7,17 @@ on:
   workflow_dispatch:
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
       - name: Install dependencies
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y cmake gcc make
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
@@ -19,3 +25,9 @@ jobs:
         run: cmake --build build --parallel
       - name: Run tests
         run: ctest --test-dir build --output-on-failure
+      - name: Check install
+        run: |
+          cmake --install build --prefix "$PWD/stage"
+          test -x stage/bin/lbzip2
+          test -f stage/share/man/man1/lbzip2.1
+          stage/bin/lbzip2 --version
