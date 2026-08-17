@@ -315,11 +315,29 @@ t_exec(const char *path, char *argv[],
   int err_fd;
   pid_t pid;
   int status;
-  char *const envp[1] = {NULL};
+  char *envp[2];
+  char path_var[8192];
 
   in_fd = open_rd(in);
   out_fd = open_wr(out);
   err_fd = open_wr(err);
+
+  /* Hand PATH to the child, and nothing else.  On Cygwin and MSYS2 the C
+     runtime is a DLL that only PATH locates, and a child that cannot load
+     it dies with exit code 127 before reaching main().  Everything else
+     stays out of the environment, so the tested program still cannot pick
+     up settings from whoever ran the suite. */
+  {
+    const char *inherited = getenv("PATH");
+    int n = 0;
+
+    if (inherited != NULL
+        && (size_t)snprintf(path_var, sizeof path_var, "PATH=%s", inherited)
+           < sizeof path_var) {
+      envp[n++] = path_var;
+    }
+    envp[n] = NULL;
+  }
 
   pid = fork();
 
