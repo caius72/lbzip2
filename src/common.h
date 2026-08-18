@@ -130,6 +130,12 @@ enum error {
 #endif
 
 
+/* CRC-32/BZIP2 -- polynomial 0x04C11DB7, most significant bit first, which is
+   the checksum bzip2 stores for each block.  In crctab.c. */
+extern uint32_t crc_table[256];
+uint32_t crc32_bzip2(uint32_t crc, const uint8_t *buf, size_t len);
+
+
 #if ENABLE_COVERAGE + 0
 void __gcov_flush(void);
 #define gcov_flush() __gcov_flush()

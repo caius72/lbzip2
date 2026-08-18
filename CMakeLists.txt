@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(lbzip2 VERSION 2.6.4 LANGUAGES C)
+project(lbzip2 VERSION 2.6.5 LANGUAGES C)
 
 option(LBZIP2_COVERAGE "Build with LLVM source-based coverage instrumentation" OFF)
 

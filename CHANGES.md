@@ -15,7 +15,33 @@ Nothing here alters the bzip2 format.  Every version below produces and
 consumes exactly the same bytes as upstream, and the 1111-case test suite
 passes on every supported platform.
 
-## Unreleased
+## 2.6.5
+
+Compression is 5 to 6% faster on real data, with no change to the bytes it
+produces.  Three separate costs came off the encoder, each measured by
+deleting the work and re-timing rather than by trusting a profiler's line
+attribution, which on an out-of-order core charges stalls to whichever
+instruction the sampler happened to catch.
+
+The block checksum no longer runs a byte at a time inside the run-length
+coder.  It covers the raw input, so it does not need to be interleaved with
+that state machine at all; `collect()` now hands the consumed range to
+`crc32_bzip2()`, which folds eight bytes per round through slice tables
+derived from the existing one.  This is plain C -- no vector unit and no
+instruction-set detection, so every platform gets it.  Worth about 3%.
+
+The symbol-frequency counters in `generate_prefix_code()` rotate through four
+arrays instead of one.  Runs of a single symbol are everywhere in
+move-to-front output, and incrementing one address twice running pays the
+store-to-load forward every time; neighbouring symbols now land in separate
+arrays so the chains overlap, and the four are folded together before the
+maximization step.  Worth about 3%.
+
+A third change was written, measured and dropped: skipping runs four symbols
+at a time in `do_mtf()` with a vector compare, and comparing raw symbols so
+the character map falls out of the hot path.  It came to 0.2%, which does not
+pay for a new parameter and a second code path.  The scalar loop was already
+running near one symbol per cycle with the branch predicted 89% of the time.
 
 The forward move-to-front transform is vectorised.  `do_mtf()` searched a
 255-byte list one symbol at a time, shifting as it went, on a data-dependent

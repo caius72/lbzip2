@@ -67,8 +67,6 @@ struct decoder_state {
 
 struct source;
 
-extern uint32_t crc_table[256];
-
 void parser_init(struct parser_state *ps, int bs100k, int stream_mode);
 int parse(struct parser_state *ps, struct header *hd, struct bitstream *bs,
           unsigned *garbage);

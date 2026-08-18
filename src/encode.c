@@ -99,6 +99,12 @@ struct encoder_state {
       uint8_t length[MAX_TREES][MAX_ALPHA_SIZE + 1];
       uint32_t code[MAX_TREES][MAX_ALPHA_SIZE + 1];
       uint32_t frequency[MAX_TREES][MAX_ALPHA_SIZE + 1];
+      /* Three more sets of counters, so that neighbouring symbols in a group
+         never increment the same address.  Folded into frequency before the
+         maximization step.  Free: the union is sized by bucket[]. */
+      uint32_t frequency2[MAX_TREES][MAX_ALPHA_SIZE + 1];
+      uint32_t frequency3[MAX_TREES][MAX_ALPHA_SIZE + 1];
+      uint32_t frequency4[MAX_TREES][MAX_ALPHA_SIZE + 1];
       unsigned tmap_old2new[MAX_TREES];
       unsigned tmap_new2old[MAX_TREES];
     } s;
@@ -108,11 +114,6 @@ struct encoder_state {
 
   int32_t SA[];
 };
-
-extern uint32_t crc_table[256];
-
-
-#define CRC(x) crc = (crc << 8) ^ crc_table[(crc >> 24) ^ (x)]
 
 #define MAX_RUN_LENGTH (4+255)
 
@@ -156,8 +157,6 @@ collect(struct encoder_state *s, const uint8_t *inbuf, size_t *buf_sz)
   uint8_t *qMax = block + s->max_block_size - 1;
   unsigned ch, last;
   uint32_t run;
-  uint32_t save_crc;
-  uint32_t crc = s->block_crc;
 
   /* State can't be equal to MAX_RUN_LENGTH because the run would have
      already been dumped by the previous function call. */
@@ -180,7 +179,6 @@ state0:
     goto done;
   }
   ch = *p++;
-  CRC(ch);
 
 #define S1                                      \
   s->cmap[ch] = true;                           \
@@ -196,7 +194,6 @@ state0:
   }                                             \
   last = ch;                                    \
   ch = *p++;                                    \
-  CRC(ch);                                      \
   if (unlikely(ch == last))                     \
     goto state2
 
@@ -221,7 +218,6 @@ state2:
     goto done;
   }
   ch = *p++;
-  CRC(ch);
   if (ch != last)
     goto state1;
 
@@ -237,7 +233,6 @@ state2:
     goto done;
   }
   ch = *p++;
-  CRC(ch);
   if (ch != last)
     goto state1;
 
@@ -257,8 +252,6 @@ state2:
 
     /* Fetch the next character. */
     ch = *p++;
-    save_crc = crc;
-    CRC(ch);
 
     /* If the character does not match, terminate
        the current run and start a fresh one. */
@@ -271,7 +264,6 @@ state2:
       /* There is no space left to begin a new run.
          Unget the last character and finish. */
       p--;
-      crc = save_crc;
       s->rle_state = -1;
       goto done;
     }
@@ -310,7 +302,6 @@ finish_run:
       /* Lookahead character turned out to be continuation of the run.
          Consume it and increase run length. */
       p++;
-      CRC(ch);
       s->rle_state++;
 
       /* If the run has reached length of MAX_RUN_LENGTH,
@@ -333,7 +324,6 @@ finish_run:
 
   /* Append the character to the run. */
   p++;
-  CRC(ch);
   s->rle_state++;
   *q++ = ch;
 
@@ -342,7 +332,7 @@ finish_run:
 
 done:
   s->nblock = q - block;
-  s->block_crc = crc;
+  s->block_crc = crc32_bzip2(s->block_crc, inbuf, (size_t)(p - inbuf));
   *buf_sz -= p - inbuf;
   return s->rle_state < 0;
 }
@@ -1175,19 +1165,40 @@ generate_prefix_code(struct encoder_state *s)
 
     /* (E): Expectation step -- estimate likehood. */
     memset(s->u.s.frequency, 0, nt * sizeof(*s->u.s.frequency));
+    memset(s->u.s.frequency2, 0, nt * sizeof(*s->u.s.frequency2));
+    memset(s->u.s.frequency3, 0, nt * sizeof(*s->u.s.frequency3));
+    memset(s->u.s.frequency4, 0, nt * sizeof(*s->u.s.frequency4));
     for (gs = mtfv; gs < mtfv + nm; gs += GROUP_SIZE) {
       /* Check out which prefix-free tree is the best to encode current
          group.  Then increment symbol frequencies for the chosen tree
-         and remember the choice in the selector array. */
+         and remember the choice in the selector array.
+
+         The counters rotate through four arrays.  Runs of one symbol are
+         everywhere in MTF output, and incrementing one address twice running
+         costs the store-to-load forward each time; sending neighbours to
+         separate arrays lets the chains overlap.  Fifty is not a multiple of
+         four, so the last two symbols fall back to the first array. */
       t = find_best_tree(gs, nt, len_pack);
       assert(t < nt);
       *sp++ = t;
-      for (i = 0; i < GROUP_SIZE; i++)
+      for (i = 0; i + 4 <= GROUP_SIZE; i += 4) {
+        s->u.s.frequency[t][gs[i]]++;
+        s->u.s.frequency2[t][gs[i + 1]]++;
+        s->u.s.frequency3[t][gs[i + 2]]++;
+        s->u.s.frequency4[t][gs[i + 3]]++;
+      }
+      for (; i < GROUP_SIZE; i++)
         s->u.s.frequency[t][gs[i]]++;
     }
 
     assert((size_t)(sp - s->u.s.selector) == s->u.s.num_selectors);
     *sp = MAX_TREES;  /* sentinel */
+
+    for (t = 0; t < nt; t++)
+      for (i = 0; i <= as; i++)
+        s->u.s.frequency[t][i] += s->u.s.frequency2[t][i]
+                                + s->u.s.frequency3[t][i]
+                                + s->u.s.frequency4[t][i];
 
     /* (M): Maximization step -- maximize expectations. */
     for (t = 0; t < nt; t++)
