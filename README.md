@@ -2,9 +2,9 @@
 
 > **Fork notice.** This is a fork of [kjn/lbzip2](https://github.com/kjn/lbzip2),
 > created on 2026-08-17 from upstream commit `724352c`, because upstream appears
-> unmaintained. Changes made in this fork are recorded in the git history and in
-> the ChangeLog. It remains free software under the GNU General Public License,
-> version 3 or later; see COPYING.
+> unmaintained. Changes made in this fork are described in [CHANGES.md](CHANGES.md)
+> and recorded in the git history. It remains free software under the GNU General
+> Public License, version 3 or later; see COPYING.
 
 Copyright (C) 2011, 2012, 2013, 2014, 2015 Mikolaj Izdebski  
 Copyright (C) 2008, 2009, 2010 Laszlo Ersek
@@ -15,6 +15,33 @@ lbzip2 is a parallel, SMP-based, bzip2-compatible compression utility.
 
 lbzip2 compresses and decompresses files using a variation of BWT compression
 stack. More information on this topic can be found in the ALGORITHM file.
+
+## How this fork differs from upstream
+
+The compressed format is untouched: this produces and reads exactly the same
+bytes as upstream and as `bzip2`.
+
+- **Faster decompression — 7 to 10%.** The inverse MTF transform uses a single
+  vector shuffle (`vqtbl1q_u8` on AArch64, `pshufb` on SSSE3) instead of a
+  branch the predictor cannot learn. No compiler flags change, so a default
+  build stays as portable as it was. ([kjn/lbzip2#31](https://github.com/kjn/lbzip2/issues/31))
+- **A default build is optimised again.** A plain `cmake ..` selected no build
+  type and therefore no optimisation at all, making the binary roughly twice as
+  slow as the autotools build it replaced. ([kjn/lbzip2#39](https://github.com/kjn/lbzip2/issues/39))
+- **Builds and passes its tests on Windows,** under the MSYS2 runtime — open
+  upstream since 2016. Native Win32 is still unported.
+  ([kjn/lbzip2#16](https://github.com/kjn/lbzip2/issues/16))
+- **Builds and passes its tests on macOS,** which strict POSIX feature-test
+  macros had broken outright.
+- **Tested on four platforms** — glibc Linux, musl Linux, macOS on Apple
+  Silicon, and Windows — on every push, all 1111 cases. Upstream CI covered
+  Linux alone.
+- **`make install` installs something:** the binary and all three manual pages,
+  honouring `--prefix` and `DESTDIR`. It previously installed nothing.
+- **Installable with Homebrew** from a tap, and reports its own version and
+  project page correctly.
+
+[CHANGES.md](CHANGES.md) describes each of these in detail.
 
 ## Installation
 
