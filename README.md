@@ -11,7 +11,7 @@
 Copyright (C) 2011, 2012, 2013, 2014, 2015 Mikolaj Izdebski  
 Copyright (C) 2008, 2009, 2010 Laszlo Ersek
 
-This README file is part of lbzip2 version 2.6.2.
+This README file is part of lbzip2 version 2.6.3.
 
 lbzip2 is a parallel, SMP-based, bzip2-compatible compression utility.
 
