@@ -90,6 +90,12 @@ tries to query the system for the number of online processors (if both the
 compilation environment and the execution environment support that), or exits
 with an error (if it's unable to determine the number of processors online).
 
+The accepted maximum is 1024, or four times the number of online processors
+where that is larger. Workers are CPU bound, so a count far above the processor
+count only costs memory and startup time; the limit rejects a mistyped
+.I WTHRS
+immediately rather than spending minutes creating threads that cannot be used.
+
 .TP
 .BR \-k ", " \-\-keep
 Don't remove

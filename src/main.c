@@ -319,6 +319,31 @@ opts_decompress(char ch)
 }
 
 
+/* The largest -n this build accepts.
+
+   _SC_THREAD_THREADS_MAX is an optional limit that most systems leave
+   undefined, in which case sysconf() returns -1 and the bound derived from it
+   becomes UINT_MAX.  A typo such as -n 300000 is then accepted, and lbzip2
+   spends minutes creating threads it cannot use, appearing to hang, before it
+   runs out of them and fails.  Workers are CPU bound, so a count far above the
+   processor count is a mistake rather than a request; the floor keeps the
+   limit generous on any machine sold today.  See kjn/lbzip2#24. */
+#define WORKER_FLOOR 1024u
+
+static uintmax_t
+max_worker(void)
+{
+  uintmax_t ceiling = WORKER_FLOOR;
+#ifdef _SC_NPROCESSORS_ONLN
+  long num_online = sysconf(_SC_NPROCESSORS_ONLN);
+
+  if (0 < num_online)
+    ceiling = max(ceiling, 4u * (uintmax_t)num_online);
+#endif
+  return ceiling;
+}
+
+
 static void
 opts_setup(struct arg **operands, size_t argc, char **argv)
 {
@@ -372,6 +397,7 @@ opts_setup(struct arg **operands, size_t argc, char **argv)
   mx_worker = -1;
 #endif
   mx_worker = min(mx_worker, min(UINT_MAX, SIZE_MAX / sizeof(pthread_t)));
+  mx_worker = min(mx_worker, max_worker());
 
   if (strcmp(pname, "bunzip2") == 0 || strcmp(pname, "lbunzip2") == 0) {
     decompress = 1;

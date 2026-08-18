@@ -54,6 +54,16 @@ against 4.88s to compress 200MB, 2.84s against 1.75s to decompress it.
 explicitly requested type is left alone.  Reported upstream as
 [kjn/lbzip2#39][39].
 
+**An absurd `-n` is rejected instead of attempted.** `_SC_THREAD_THREADS_MAX`
+is an optional limit that most systems leave undefined, in which case
+`sysconf()` returns -1 and the bound derived from it becomes `UINT_MAX`.  A
+mistyped `-n 300000` was therefore accepted, and lbzip2 spent minutes creating
+threads it could not use -- appearing to hang -- before running out and
+failing.  The maximum is now 1024, or four times the number of online
+processors where that is larger, and an over-large value is refused
+immediately, naming the accepted range.  Reported upstream as
+[kjn/lbzip2#24][24].
+
 ### Portability
 
 **Windows builds and passes the test suite, under MSYS2.** Native Win32 has no
@@ -141,11 +151,13 @@ Install rules and a real version, as described above.
 | Issue | State in this fork |
 |---|---|
 | [#16][16] porting to windows | Builds and tests under MSYS2, verified in CI.  Native Win32 remains unported. |
+| [#24][24] limit thread upper bound | Implemented: `-n` is bounded, and an over-large value fails at once. |
 | [#22][22] does not build on Fedora Rawhide | Cannot occur: the failure was in gnulib, which the CMake build does not use. |
 | [#31][31] speedup opportunity via vector shuffle | Implemented for both NEON and SSSE3, with fresh measurements. |
 | [#39][39] lbzip2 is 2x slower since last commits | Root cause was the missing default build type.  Fixed. |
 
 [16]: https://github.com/kjn/lbzip2/issues/16
 [22]: https://github.com/kjn/lbzip2/issues/22
+[24]: https://github.com/kjn/lbzip2/issues/24
 [31]: https://github.com/kjn/lbzip2/issues/31
 [39]: https://github.com/kjn/lbzip2/issues/39
