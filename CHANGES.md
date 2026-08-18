@@ -17,6 +17,17 @@ passes on every supported platform.
 
 ## Unreleased
 
+The forward move-to-front transform is vectorised.  `do_mtf()` searched a
+255-byte list one symbol at a time, shifting as it went, on a data-dependent
+branch that predicts badly; it now compares sixteen bytes per instruction and
+slides them sixteen at a time.  AArch64 uses `vceqq_u8()` and `vextq_u8()`,
+which are baseline NEON; x86 uses SSE2, since this direction needs a compare
+and a byte shift rather than the shuffle `mtf_one()` wants SSSE3 for.  A
+scalar fallback remains for everything else.  Measured on 220 MB of mixed
+real data, the transform itself is 26% faster and whole-file compression is
+about 2% faster, single-threaded and across eighteen threads alike; output is
+byte-identical, verified on both vector paths and the scalar one.
+
 Sixteen command line tests join the suite, raising line coverage of `src/` from
 80.7% to 88.1% and covering fourteen functions that nothing had ever executed.
 The most valuable of them is the plainest: lbzip2 removes its input once it has

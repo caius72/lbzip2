@@ -25,6 +25,18 @@
 #include <arpa/inet.h>          /* htonl() */
 #include <string.h>             /* memset() */
 
+/* The forward move-to-front transform searches a list of symbols and then
+   shifts everything below the hit up by one slot.  Both halves run sixteen
+   bytes at a time.  This direction needs no shuffle, only a compare and a
+   byte shift, so plain SSE2 will do where decode.c wants SSSE3. */
+#if defined(__aarch64__) && defined(__ARM_NEON)
+# include <arm_neon.h>          /* vceqq_u8(), vextq_u8() */
+# define MTF_NEON 1
+#elif defined(__SSE2__)
+# include <emmintrin.h>         /* _mm_cmpeq_epi8(), _mm_slli_si128() */
+# define MTF_SSE2 1
+#endif
+
 
 /*
   PREFIX CODING (also called Huffman coding)
@@ -355,13 +367,98 @@ make_map_e(uint8_t *cmap, const bool *inuse)
 }
 
 
+#if defined(MTF_NEON) || defined(MTF_SSE2)
+
+/* Lane numbers, for turning a hit position into a blend mask. */
+static const uint8_t mtf_lane[16] = {
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+};
+
+/* Index of C in ORDER.  The caller guarantees C is there: ORDER holds every
+   symbol except the one at the front of the list, and C is never that one.
+   ORDER is 256 bytes so the last vector load stays in bounds; a stray match
+   in the pad byte cannot win, because the real one sits at a lower index. */
+static unsigned
+mtf_search(const uint8_t *order, uint8_t c)
+{
+  unsigned j;
+
+  for (j = 0; j < 256u; j += 16u) {
+#ifdef MTF_NEON
+    uint8x16_t eq = vceqq_u8(vld1q_u8(order + j), vdupq_n_u8(c));
+    /* Halve each lane's width to get four mask bits per byte in one word. */
+    uint64_t m = vget_lane_u64(vreinterpret_u64_u8(
+                   vshrn_n_u16(vreinterpretq_u16_u8(eq), 4)), 0);
+
+    if (m != 0)
+      return j + (unsigned)(__builtin_ctzll(m) >> 2);
+#else
+    unsigned m = (unsigned)_mm_movemask_epi8(
+                   _mm_cmpeq_epi8(_mm_loadu_si128((const __m128i *)(order + j)),
+                                  _mm_set1_epi8((char)c)));
+
+    if (m != 0)
+      return j + (unsigned)__builtin_ctz(m);
+#endif
+  }
+
+  assert(0);                    /* unreachable: C is always in ORDER */
+  return 0;
+}
+
+/* Move ORDER[0..J-1] up one slot and drop U in at the front, overwriting the
+   symbol at ORDER[J].  Chunks run downwards so each one reads its incoming
+   byte before the chunk below it is touched. */
+static void
+mtf_slide(uint8_t *order, unsigned j, uint8_t u)
+{
+  unsigned b = j & ~15u;
+  uint8_t carry = (b == 0u) ? u : order[b - 1u];
+
+#ifdef MTF_NEON
+  uint8x16_t v = vld1q_u8(order + b);
+  /* Lanes at or below the hit take the shifted vector, the rest stand. */
+  uint8x16_t keep = vcgtq_u8(vld1q_u8(mtf_lane), vdupq_n_u8((uint8_t)(j & 15u)));
+
+  vst1q_u8(order + b, vbslq_u8(keep, v, vextq_u8(vdupq_n_u8(carry), v, 15)));
+
+  while (b != 0u) {
+    b -= 16u;
+    carry = (b == 0u) ? u : order[b - 1u];
+    v = vld1q_u8(order + b);
+    vst1q_u8(order + b, vextq_u8(vdupq_n_u8(carry), v, 15));
+  }
+#else
+  __m128i v = _mm_loadu_si128((const __m128i *)(order + b));
+  __m128i keep = _mm_cmpgt_epi8(_mm_loadu_si128((const __m128i *)mtf_lane),
+                                _mm_set1_epi8((char)(j & 15u)));
+  __m128i sh = _mm_or_si128(_mm_slli_si128(v, 1), _mm_cvtsi32_si128(carry));
+
+  _mm_storeu_si128((__m128i *)(order + b),
+                   _mm_or_si128(_mm_and_si128(keep, v),
+                                _mm_andnot_si128(keep, sh)));
+
+  while (b != 0u) {
+    b -= 16u;
+    carry = (b == 0u) ? u : order[b - 1u];
+    v = _mm_loadu_si128((const __m128i *)(order + b));
+    _mm_storeu_si128((__m128i *)(order + b),
+                     _mm_or_si128(_mm_slli_si128(v, 1),
+                                  _mm_cvtsi32_si128(carry)));
+  }
+#endif
+}
+
+#endif
+
+
 /*---------------------------------------------------*/
 /* returns nmtf */
 static uint32_t
 do_mtf(int32_t *bwt, uint32_t *mtffreq, uint8_t *cmap, int32_t nblock,
        int32_t EOB)
 {
-  uint8_t order[255];
+  uint8_t order[256];           /* 255 symbols, padded for vector access */
   int32_t i;
   int32_t k;
   int32_t t;
@@ -377,6 +474,7 @@ do_mtf(int32_t *bwt, uint32_t *mtffreq, uint8_t *cmap, int32_t nblock,
   u = 0;
   for (i = 0; i < 255; i++)
     order[i] = i + 1;
+  order[255] = 0;               /* pad; never the first hit of a search */
 
 #define RUN()                                   \
   if (unlikely(k))                              \
@@ -385,6 +483,18 @@ do_mtf(int32_t *bwt, uint32_t *mtffreq, uint8_t *cmap, int32_t nblock,
       k >>= 1;                                  \
     } while (k)                                 \
 
+#if defined(MTF_NEON) || defined(MTF_SSE2)
+#define MTF()                                   \
+  {                                             \
+    unsigned j = mtf_search(order, c);          \
+                                                \
+    mtf_slide(order, j, u);                     \
+    u = c;                                      \
+    t = (int32_t)j + 2;                         \
+    *mtfv++ = t;                                \
+    mtffreq[t]++;                               \
+  }
+#else
 #define MTF()                                   \
   {                                             \
     uint8_t *p = order;                         \
@@ -403,6 +513,7 @@ do_mtf(int32_t *bwt, uint32_t *mtffreq, uint8_t *cmap, int32_t nblock,
     *mtfv++ = t;                                \
     mtffreq[t]++;                               \
   }
+#endif
 
   for (i = 0; i < nblock; i++) {
     if ((c = cmap[*bwt++]) == u) {
