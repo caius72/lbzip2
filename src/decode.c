@@ -22,6 +22,10 @@
 #include "common.h"
 #include <arpa/inet.h>          /* ntohl() */
 #include <string.h>             /* memcpy() */
+#if defined(__aarch64__) && defined(__ARM_NEON)
+# include <arm_neon.h>          /* vqtbl1q_u8() */
+# define MTF_NEON 1
+#endif
 
 #include "decode.h"
 #include "main.h"
@@ -453,6 +457,34 @@ mtf_one(uint8_t **imtf_row, uint8_t *imtf_slide, uint8_t c)
        version is given in #else clause.
      */
 #if ROW_WIDTH == 16
+#ifdef MTF_NEON
+    {
+      /* Row nn moves to the front and everything above it shifts up by one,
+         which is one table lookup: byte i of the result is byte tab[nn][i]
+         of the row. */
+      static const uint8_t tab[16][16] = {
+      { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+      { 1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+      { 2, 0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+      { 3, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+      { 4, 0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+      { 5, 0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+      { 6, 0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+      { 7, 0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15 },
+      { 8, 0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15 },
+      { 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15 },
+      { 10, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15 },
+      { 11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15 },
+      { 12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15 },
+      { 13, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15 },
+      { 14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15 },
+      { 15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 },
+      };
+
+      vst1q_u8(pp, vqtbl1q_u8(vld1q_u8(pp), vld1q_u8(tab[nn])));
+      return c;
+    }
+#endif
     switch (nn) {
     default:
       abort();
