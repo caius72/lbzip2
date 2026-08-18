@@ -21,6 +21,14 @@ add_compile_definitions(
 )
 add_compile_options(-Wall -Wextra)
 
+# Off by default on purpose: a compiler newer than this release will invent
+# warnings this code has never seen, and turning those into errors would break
+# the build for people who only want to install lbzip2.  CI turns it on.
+option(LBZIP2_WERROR "Treat compiler warnings as errors" OFF)
+if(LBZIP2_WERROR)
+    add_compile_options(-Werror)
+endif()
+
 find_package(Threads REQUIRED)
 
 set(SRC_FILES

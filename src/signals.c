@@ -237,6 +237,7 @@ halt(void)
    */
   ret = sigsuspend(&saved);
   assert(-1 == ret && EINTR == errno);
+  (void)ret;                    /* the assertion is its only reader */
 
   sig = handled_signals[caught_index];
   assert(xmember(&handled, sig));

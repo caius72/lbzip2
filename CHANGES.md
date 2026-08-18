@@ -17,6 +17,13 @@ passes on every supported platform.
 
 ## Unreleased
 
+`halt()` no longer warns about a variable only the assertion reads, which
+`NDEBUG` compiles away, so a release build is free of compiler warnings on
+every platform CI covers.  CI builds with `-Werror` to keep it that way,
+through a `LBZIP2_WERROR` option that is off by default: a compiler newer than
+this release will invent warnings this code has never seen, and turning those
+into errors would break the build for people who only want to install lbzip2.
+
 `src/common.h` no longer redefines `_Noreturn` when the C library already
 defines it -- MSYS2 makes it `__dead2` in `<sys/cdefs.h>`, and redefining it
 differently warned once per translation unit.
