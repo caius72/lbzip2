@@ -25,6 +25,9 @@
 #if defined(__aarch64__) && defined(__ARM_NEON)
 # include <arm_neon.h>          /* vqtbl1q_u8() */
 # define MTF_NEON 1
+#elif defined(__SSSE3__)
+# include <tmmintrin.h>         /* _mm_shuffle_epi8() */
+# define MTF_SSSE3 1
 #endif
 
 #include "decode.h"
@@ -440,6 +443,44 @@ static const uint8_t R[64] = {
    search trees, but these algorithms have quite big constant factor
    which makes them impractical for MTF of 256 items.
 */
+#if defined(MTF_NEON) || defined(MTF_SSSE3)
+/* Moving row nn to the front and shifting everything above it up by one is a
+   single byte shuffle: byte i of the result is byte mtf_shuffle[nn][i] of the
+   row. */
+static const uint8_t mtf_shuffle[16][16] = {
+  { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+  { 1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+  { 2, 0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+  { 3, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+  { 4, 0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+  { 5, 0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+  { 6, 0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+  { 7, 0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15 },
+  { 8, 0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15 },
+  { 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15 },
+  { 10, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15 },
+  { 11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15 },
+  { 12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15 },
+  { 13, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15 },
+  { 14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15 },
+  { 15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 },
+};
+
+static void
+shuffle_row(uint8_t *pp, unsigned nn)
+{
+#ifdef MTF_NEON
+  vst1q_u8(pp, vqtbl1q_u8(vld1q_u8(pp), vld1q_u8(mtf_shuffle[nn])));
+#else
+  _mm_storeu_si128((__m128i *)pp,
+                   _mm_shuffle_epi8(_mm_loadu_si128((const __m128i *)pp),
+                                    _mm_loadu_si128((const __m128i *)
+                                                    mtf_shuffle[nn])));
+#endif
+}
+#endif
+
+
 static uint8_t
 mtf_one(uint8_t **imtf_row, uint8_t *imtf_slide, uint8_t c)
 {
@@ -457,31 +498,9 @@ mtf_one(uint8_t **imtf_row, uint8_t *imtf_slide, uint8_t c)
        version is given in #else clause.
      */
 #if ROW_WIDTH == 16
-#ifdef MTF_NEON
+#if defined(MTF_NEON) || defined(MTF_SSSE3)
     {
-      /* Row nn moves to the front and everything above it shifts up by one,
-         which is one table lookup: byte i of the result is byte tab[nn][i]
-         of the row. */
-      static const uint8_t tab[16][16] = {
-      { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-      { 1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-      { 2, 0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-      { 3, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-      { 4, 0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-      { 5, 0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-      { 6, 0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-      { 7, 0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15 },
-      { 8, 0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15 },
-      { 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15 },
-      { 10, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15 },
-      { 11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15 },
-      { 12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15 },
-      { 13, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15 },
-      { 14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15 },
-      { 15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 },
-      };
-
-      vst1q_u8(pp, vqtbl1q_u8(vld1q_u8(pp), vld1q_u8(tab[nn])));
+      shuffle_row(pp, nn);
       return c;
     }
 #endif
