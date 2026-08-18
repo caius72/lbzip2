@@ -109,10 +109,16 @@ enum error {
 
 
 #if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L
-# if GNUC_VERSION >= 20500
-#  define _Noreturn __attribute__((noreturn))
-# else
-#  define _Noreturn
+/* Some C libraries define _Noreturn themselves when the compiler is not in
+   C11 mode -- MSYS2 makes it __dead2 in <sys/cdefs.h>.  Theirs means the same
+   thing as ours, and redefining it differently warns once per translation
+   unit, so leave any existing definition alone. */
+# ifndef _Noreturn
+#  if GNUC_VERSION >= 20500
+#   define _Noreturn __attribute__((noreturn))
+#  else
+#   define _Noreturn
+#  endif
 # endif
 #endif
 

@@ -15,6 +15,12 @@ Nothing here alters the bzip2 format.  Every version below produces and
 consumes exactly the same bytes as upstream, and the 1111-case test suite
 passes on every supported platform.
 
+## Unreleased
+
+`src/common.h` no longer redefines `_Noreturn` when the C library already
+defines it -- MSYS2 makes it `__dead2` in `<sys/cdefs.h>`, and redefining it
+differently warned once per translation unit.
+
 ## 2.6.3
 
 ### Performance
