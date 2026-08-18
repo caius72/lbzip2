@@ -51,7 +51,6 @@ extern unsigned bs100k;         /* -1..-9 */
 extern bool force;              /* -f */
 extern bool keep;               /* -k */
 extern bool verbose;            /* -v */
-extern bool print_cctrs;        /* -S */
 extern bool small;              /* -s */
 extern bool ultra;              /* -u */
 extern struct filespec ispec;

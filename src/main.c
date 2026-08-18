@@ -42,7 +42,6 @@ unsigned bs100k = 9;            /* -1..-9 */
 bool force;                     /* -f */
 bool keep;                      /* -k */
 bool verbose;                   /* -v */
-bool print_cctrs;               /* -S */
 bool small;                     /* -s */
 bool ultra;                     /* -u */
 struct filespec ispec;
@@ -201,46 +200,45 @@ xstrtol(const char *str, int source, uintmax_t lower, uintmax_t upper)
   the macro definition automatically.
 */
 #define USAGE_STRING "%s%s%s%s%s%s", "Usage:\n1. PROG [-n WTHRS] [-k|-c|-t] [-\
-d|-z] [-1 .. -9] [-f] [-v] [-S] {FILE}\n2. PROG -h|-V\n\nRecognized PROG names\
-:\n\n  bunzip2, lbunzip2  : Decompress. Forceable with `-d'.\n  bzcat, lbzcat \
-     : Decompress to stdout. Forceable with `-cd'.\n  <otherwise>        : Com\
-press. Forceable with `-z'.\n\nEnvironment variables:\n\n  LBZIP2, BZIP2,\n  B\
-ZIP               : Insert arguments between PROG and the rest of the\n       \
-                command line. Tokens are separated by spaces and tabs;\n      \
-                ", " no escaping.\n\nOptions:\n\n  -n WTHRS           : Set th\
-e number of (de)compressor threads to WTHRS, where\n                       WTH\
-RS is a positive integer.\n  -k, --keep         : Don't remove FILE operands. \
-Open regular input files\n                       with more than one link.\n  -\
-c, --stdout       : Write output to stdout even with FILE operands. Implies\n \
-                      `-k'. Incompatible with `-t'.\n  -t, --test         : Te\
-st decompression; discard output instead of writing it\n                ", "  \
-     to files or stdout. Implies `-k'. Incompatible with\n                    \
-   `-c'.\n  -d, --decompress   : Force decompression over the selection by PRO\
-G.\n  -z, --compress     : Force compression over the selection by PROG.\n  -1\
- .. -9           : Set the compression block size to 100K .. 900K.\n  --fast  \
-           : Alias for `-1'.\n  --best             : Alias for `-9'. This is t\
-he default.\n  -f, --force        : Open non-regular input files. Open input f\
-iles with more\n                       than one", " link. Try to remove each o\
-utput file before\n                       opening it. With `-cd' copy files no\
-t in bzip2 format.\n  -s, --small        : Reduce memory usage at cost of perf\
-ormance.\n  -u, --sequential   : Perform splitting input blocks sequentially. \
-This may\n                       improve compression ratio and decrease CPU us\
-age, but\n                       will degrade scalability.\n  -v, --verbose   \
-   : Log each (de)compression start to stderr. Display\n                      \
- compression ratio an", "d space savings. Display progress\n                  \
-     information if stderr is connected to a terminal.\n  -S                 :\
- Print condition variable statistics to stderr.\n  -q, --quiet,\n  --repetitiv\
-e-fast,\n  --repetitive-best,\n  --exponential      : Accepted for compatibili\
-ty, otherwise ignored.\n  -h, --help         : Print this help to stdout and e\
-xit.\n  -L, --license, -V,\n  --version          : Print version information t\
-o stdout and exit.\n\nOperands:\n\n  FILE               : Specify files to com\
-p", "ress or decompress. If no FILE is\n                       given, work as \
-a filter. FILEs with `.bz2', `.tbz',\n                       `.tbz2' and `.tz2\
-' name suffixes will be skipped when\n                       compressing. When\
- decompressing, `.bz2' suffixes will be\n                       removed in out\
-put filenames; `.tbz', `.tbz2' and `.tz2'\n                       suffixes wil\
-l be replaced by `.tar'; other filenames\n                       will be suffi\
-xed with `.out'.\n"
+d|-z] [-1 .. -9] [-f] [-v] {FILE}\n2. PROG -h|-V\n\nRecognized PROG names:\n\n\
+  bunzip2, lbunzip2  : Decompress. Forceable with `-d'.\n  bzcat, lbzcat      \
+: Decompress to stdout. Forceable with `-cd'.\n  <otherwise>        : Compress\
+. Forceable with `-z'.\n\nEnvironment variables:\n\n  LBZIP2, BZIP2,\n  BZIP  \
+             : Insert arguments between PROG and the rest of the\n            \
+           command line. Tokens are separated by spaces and tabs;\n           \
+            no e", "scaping.\n\nOptions:\n\n  -n WTHRS           : Set the num\
+ber of (de)compressor threads to WTHRS, where\n                       WTHRS is\
+ a positive integer.\n  -k, --keep         : Don't remove FILE operands. Open \
+regular input files\n                       with more than one link.\n  -c, --\
+stdout       : Write output to stdout even with FILE operands. Implies\n      \
+                 `-k'. Incompatible with `-t'.\n  -t, --test         : Test de\
+compression; discard output instead of writing it\n                     ", "  \
+to files or stdout. Implies `-k'. Incompatible with\n                       `-\
+c'.\n  -d, --decompress   : Force decompression over the selection by PROG.\n \
+ -z, --compress     : Force compression over the selection by PROG.\n  -1 .. -\
+9           : Set the compression block size to 100K .. 900K.\n  --fast       \
+      : Alias for `-1'.\n  --best             : Alias for `-9'. This is the de\
+fault.\n  -f, --force        : Open non-regular input files. Open input files \
+with more\n                       than one link", ". Try to remove each output\
+ file before\n                       opening it. With `-cd' copy files not in \
+bzip2 format.\n  -s, --small        : Reduce memory usage at cost of performan\
+ce.\n  -u, --sequential   : Perform splitting input blocks sequentially. This \
+may\n                       improve compression ratio and decrease CPU usage, \
+but\n                       will degrade scalability.\n  -v, --verbose      : \
+Log each (de)compression start to stderr. Display\n                       comp\
+ression ratio and spa", "ce savings. Display progress\n                       \
+information if stderr is connected to a terminal.\n  -S, -q, --quiet,\n  --rep\
+etitive-fast,\n  --repetitive-best,\n  --exponential      : Accepted for compa\
+tibility, otherwise ignored.\n  -h, --help         : Print this help to stdout\
+ and exit.\n  -L, --license, -V,\n  --version          : Print version informa\
+tion to stdout and exit.\n\nOperands:\n\n  FILE               : Specify files \
+to compress or decompress. If no FILE is\n                       given, work a\
+s", " a filter. FILEs with `.bz2', `.tbz',\n                       `.tbz2' and\
+ `.tz2' name suffixes will be skipped when\n                       compressing\
+. When decompressing, `.bz2' suffixes will be\n                       removed \
+in output filenames; `.tbz', `.tbz2' and `.tz2'\n                       suffix\
+es will be replaced by `.tar'; other filenames\n                       will be\
+ suffixed with `.out'.\n"
 
 #define HELP_STRING "%s version %s\n%s\n\n%s%s",                        \
     PACKAGE_NAME, PACKAGE_VERSION, PACKAGE_URL,                        \
@@ -544,7 +542,9 @@ opts_setup(struct arg **operands, size_t argc, char **argv)
               break;
 
             case 'S':
-              print_cctrs = 1;
+              /* Printed condition variable statistics until the engine was
+                 replaced in 2012.  Still accepted so that scripts passing it
+                 keep working. */
               break;
 
             case 'q':

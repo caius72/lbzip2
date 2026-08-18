@@ -17,6 +17,18 @@ passes on every supported platform.
 
 ## Unreleased
 
+Dead weight is gone: `build-aux/autogen.sh` bootstrapped autotools and gnulib
+against a `configure.ac` that no longer exists, `build-aux/style-check.pl` was
+invoked by nothing, and the four `tests/*.test` wrappers were shims for the
+automake harness that CMake replaced.  `mtf_one()` no longer carries a generic
+shift loop for a `ROW_WIDTH` that has been fixed at sixteen since 2011; a
+`#error` guards the assumption instead.
+
+`-S` is documented honestly.  It set a flag that nothing has read since the
+engine was replaced in 2012, while the manual promised condition variable
+statistics.  The flag is gone and the option is still accepted, so scripts
+passing it keep working.
+
 `halt()` no longer warns about a variable only the assertion reads, which
 `NDEBUG` compiles away, so a release build is free of compiler warnings on
 every platform CI covers.  CI builds with `-Werror` to keep it that way,

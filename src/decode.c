@@ -494,10 +494,11 @@ mtf_one(uint8_t **imtf_row, uint8_t *imtf_slide, uint8_t c)
     c = pp[nn];
 
     /* Forgive me the ugliness of this code, but mtf_one() is executed
-       frequently and needs to be fast.  An equivalent (simpler and slower)
-       version is given in #else clause.
+       frequently and needs to be fast.
      */
-#if ROW_WIDTH == 16
+#if ROW_WIDTH != 16
+# error "mtf_one() shifts a row of exactly sixteen bytes"
+#endif
 #if defined(MTF_NEON) || defined(MTF_SSSE3)
     {
       shuffle_row(pp, nn);
@@ -512,12 +513,6 @@ mtf_one(uint8_t **imtf_row, uint8_t *imtf_slide, uint8_t c)
       R(8); R(7); R(6); R(5); R(4); R(3); R(2); R(1);
 #undef R
     }
-#else
-    while (nn > 0) {
-      pp[nn] = pp[nn - 1];
-      nn--;
-    }
-#endif
   }
   else {  /* A general case for indices >= ROW_WIDTH. */
 

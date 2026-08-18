@@ -24,19 +24,19 @@ lbzip2 \- parallel bzip2 utility
 .BR lbzip2 "|" bzip2 " [" \-n
 .IR WTHRS ]
 .RB [ \-k "|" \-c "|" \-t "] [" \-d "] [" \-1 " .. " \-9 "] [" \-f "] [" \-s ]
-.RB [ \-u "] [" \-v "] [" \-S "] ["
+.RB [ \-u "] [" \-v "] ["
 .IR "FILE ... " ]
 
 .BR lbunzip2 "|" bunzip2 " [" \-n
 .IR WTHRS ]
 .RB [ \-k "|" \-c "|" \-t "] [" \-z "] [" \-f "] [" \-s "] [" \-u "] [" \-v ]
-.RB [ \-S "] ["
+.RB [
 .IR "FILE ... " ]
 
 .BR lbzcat "|" bzcat " [" \-n
 .IR WTHRS ]
 .RB [ \-z "] [" \-f "] [" \-s "] [" \-u "] [" \-v ]
-.RB [ \-S "] ["
+.RB [
 .IR "FILE ... " ]
 
 .BR lbzip2 "|" bzip2 "|" lbunzip2 "|" bunzip2 "|" lbzcat "|" bzcat " " \-h
@@ -183,16 +183,16 @@ showing compression ratio, space savings, total compression time (wall time)
 and average (de)compression speed (bytes of plain data processed per second).
 
 .TP
-.B \-S
-Print condition variable statistics to standard error for each completed
-(de)compression operation. Useful in profiling.
-
-.TP
-.BR \-q ", " \-\-quiet ", " \-\-repetitive\-fast ", " \
+.BR \-S ", " \-q ", " \-\-quiet ", " \-\-repetitive\-fast ", " \
     \-\-repetitive\-best ", " \-\-exponential
-Accepted for compatibility with
-.BR bzip2 ,
-otherwise ignored.
+Accepted and ignored.
+.B \-q
+and the
+.B \-\-repetitive
+options exist for compatibility with
+.BR bzip2 ;
+.B \-S
+printed condition variable statistics until the engine was replaced in 2012.
 
 .TP
 .BR \-h ", " \-\-help

@@ -71,7 +71,7 @@ print F;
 
 __END__
 Usage:
-1. PROG [-n WTHRS] [-k|-c|-t] [-d|-z] [-1 .. -9] [-f] [-v] [-S] {FILE}
+1. PROG [-n WTHRS] [-k|-c|-t] [-d|-z] [-1 .. -9] [-f] [-v] {FILE}
 2. PROG -h|-V
 
 Recognized PROG names:
@@ -141,10 +141,7 @@ and decrease CPU usage, but will degrade scalability.
 Log each (de)compression start to stderr. Display compression ratio and space
 savings. Display progress information if stderr is connected to a terminal.
 
-@-S
-Print condition variable statistics to stderr.
-
-@-q, --quiet, --repetitive-fast, --repetitive-best, --exponential
+@-S, -q, --quiet, --repetitive-fast, --repetitive-best, --exponential
 Accepted for compatibility, otherwise ignored.
 
 @-h, --help
