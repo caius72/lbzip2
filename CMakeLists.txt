@@ -1,12 +1,19 @@
 cmake_minimum_required(VERSION 3.15)
 project(lbzip2 VERSION 2.6.4 LANGUAGES C)
 
+option(LBZIP2_COVERAGE "Build with LLVM source-based coverage instrumentation" OFF)
+
 # An unadorned "cmake .." selects no build type, and therefore no optimisation
 # at all, which the autotools build this replaced did not do: its default
 # CFLAGS were -g -O2.  The result is a binary roughly twice as slow, reported
-# upstream as kjn/lbzip2#39.
+# upstream as kjn/lbzip2#39.  A coverage build wants Debug instead, since
+# NDEBUG would compile out the assertions, which are code worth covering.
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+    if(LBZIP2_COVERAGE)
+        set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+    else()
+        set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+    endif()
 endif()
 
 set(CMAKE_C_STANDARD 99)
@@ -27,6 +34,17 @@ add_compile_options(-Wall -Wextra)
 option(LBZIP2_WERROR "Treat compiler warnings as errors" OFF)
 if(LBZIP2_WERROR)
     add_compile_options(-Werror)
+endif()
+
+# The profile path is baked in at compile time rather than left to
+# LLVM_PROFILE_FILE, because the test driver hands its children an environment
+# containing only PATH.  %c asks for continuous mode, without which lbzip2
+# records nothing at all: it leaves through _exit(), which skips the atexit
+# handler that would otherwise write the profile out.
+if(LBZIP2_COVERAGE)
+    add_compile_options(-fprofile-instr-generate=${CMAKE_BINARY_DIR}/raw/%c%p.profraw
+                        -fcoverage-mapping -O0 -g)
+    add_link_options(-fprofile-instr-generate)
 endif()
 
 find_package(Threads REQUIRED)
@@ -55,6 +73,16 @@ if(APPLE)
     target_compile_definitions(lbzip2 PRIVATE _DARWIN_C_SOURCE)
 endif()
 
+if(LBZIP2_COVERAGE)
+    add_custom_target(coverage
+        COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/raw ${CMAKE_BINARY_DIR}/coverage
+        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+        COMMAND sh ${CMAKE_SOURCE_DIR}/build-aux/coverage.sh ${CMAKE_BINARY_DIR} $<TARGET_FILE:lbzip2>
+        DEPENDS lbzip2 driver minbzcat
+        USES_TERMINAL
+        COMMENT "Running the test suite and summarising coverage")
+endif()
+
 include(GNUInstallDirs)
 install(TARGETS lbzip2 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES man/lbzip2.1 man/lbunzip2.1 man/lbzcat.1
@@ -71,6 +99,30 @@ file(GLOB_RECURSE bz2_files_compress RELATIVE ${CMAKE_SOURCE_DIR}
 
 file(GLOB_RECURSE bz2_files_expand RELATIVE ${CMAKE_SOURCE_DIR}
         tests/suite/manual-expand/*.bz2)
+
+# Command line behaviour, as opposed to the compressed format.
+set(CLI_CASES
+    removes_input
+    keeps_input_with_k
+    removes_input_on_decompress
+    roundtrip_preserves_content
+    existing_target_skips
+    force_overwrites_target
+    missing_operand_warns
+    directory_operand_warns
+    compressed_suffix_skips
+    not_bzip2_fails
+    force_copies_non_bzip2
+    rejects_unknown_option
+    rejects_excessive_threads
+    accepts_ignored_options
+    help_and_version
+    test_mode_detects_corruption
+)
+foreach(case_name ${CLI_CASES})
+    add_test(NAME cli_${case_name}
+            COMMAND sh ${CMAKE_SOURCE_DIR}/tests/cli.sh ${case_name} $<TARGET_FILE:lbzip2>)
+endforeach()
 
 foreach(bz2_file ${bz2_files_compress})
     string(REGEX MATCH "tests/suite/([^/]+)/([^.]+)\\.bz2" _ "${bz2_file}")

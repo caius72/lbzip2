@@ -15,6 +15,21 @@ Nothing here alters the bzip2 format.  Every version below produces and
 consumes exactly the same bytes as upstream, and the 1111-case test suite
 passes on every supported platform.
 
+## Unreleased
+
+Sixteen command line tests join the suite, raising line coverage of `src/` from
+80.7% to 88.1% and covering fourteen functions that nothing had ever executed.
+The most valuable of them is the plainest: lbzip2 removes its input once it has
+compressed it, and every existing test avoided that with `-k` or `-c`, so the
+one behaviour that destroys user data was never exercised.
+
+`cmake -DLBZIP2_COVERAGE=ON` builds instrumented and `make coverage` runs the
+suite and reports.  The profile path is baked in at compile time because the
+test driver hands its children an environment containing only `PATH`, and
+continuous mode is required because lbzip2 leaves through `_exit()`, which
+skips the handler that would write the profile out; without it the report reads
+zero.
+
 ## 2.6.4
 
 Dead weight is gone: `build-aux/autogen.sh` bootstrapped autotools and gnulib
