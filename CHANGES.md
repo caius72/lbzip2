@@ -5,6 +5,12 @@ differs from [kjn/lbzip2](https://github.com/kjn/lbzip2), from which it was
 forked on 2026-08-17 at commit `724352c`.  Upstream's own history is in
 `ChangeLog` and `NEWS`; only the fork's changes are described here.
 
+The fork exists because upstream stopped moving: Homebrew disabled its lbzip2
+formula on 2025-07-07 as unmaintained and removed it a year later, on
+2026-07-08, leaving macOS users without a package.  Several of the changes
+below are the reasons it had become hard to package -- it did not build on
+macOS at all, and `make install` installed nothing.
+
 Nothing here alters the bzip2 format.  Every version below produces and
 consumes exactly the same bytes as upstream, and the 1111-case test suite
 passes on every supported platform.

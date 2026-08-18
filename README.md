@@ -1,8 +1,9 @@
 # lbzip2, parallel bzip2 compression utility
 
 > **Fork notice.** This is a fork of [kjn/lbzip2](https://github.com/kjn/lbzip2),
-> created on 2026-08-17 from upstream commit `724352c`, because upstream appears
-> unmaintained. Changes made in this fork are described in [CHANGES.md](CHANGES.md)
+> created on 2026-08-17 from upstream commit `724352c`, because upstream is
+> unmaintained -- Homebrew disabled its lbzip2 formula on 2025-07-07 for that
+> reason and removed it on 2026-07-08. Changes made in this fork are described in [CHANGES.md](CHANGES.md)
 > and recorded in the git history. It remains free software under the GNU General
 > Public License, version 3 or later; see COPYING.
 
@@ -57,9 +58,10 @@ Installing by the fully qualified name above trusts this one implicitly, so the
 first command is only strictly needed if you tap first and then install
 `lbzip2` by its short name; running it up front does no harm either way.
 
-Homebrew core also ships an `lbzip2` formula, built from upstream 2.5. Only one
-of the two can be installed at a time, so run `brew uninstall lbzip2` first if
-you already have it.
+Homebrew core dropped its own `lbzip2` formula: disabled on 2025-07-07 as
+unmaintained, removed on 2026-07-08. This tap is a replacement for it. If a
+copy from before the removal is still installed, `brew uninstall lbzip2` first,
+since the two cannot occupy the name at once.
 
 From source, with CMake 3.15 or newer and a C99 compiler:
 
