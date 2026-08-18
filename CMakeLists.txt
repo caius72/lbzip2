@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.15)
 project(lbzip2 VERSION 2.6.2 LANGUAGES C)
 
+# An unadorned "cmake .." selects no build type, and therefore no optimisation
+# at all, which the autotools build this replaced did not do: its default
+# CFLAGS were -g -O2.  The result is a binary roughly twice as slow, reported
+# upstream as kjn/lbzip2#39.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
