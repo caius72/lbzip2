@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(lbzip2 VERSION 2.6.3 LANGUAGES C)
+project(lbzip2 VERSION 2.6.4 LANGUAGES C)
 
 # An unadorned "cmake .." selects no build type, and therefore no optimisation
 # at all, which the autotools build this replaced did not do: its default

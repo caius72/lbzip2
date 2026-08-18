@@ -15,7 +15,7 @@ Nothing here alters the bzip2 format.  Every version below produces and
 consumes exactly the same bytes as upstream, and the 1111-case test suite
 passes on every supported platform.
 
-## Unreleased
+## 2.6.4
 
 Dead weight is gone: `build-aux/autogen.sh` bootstrapped autotools and gnulib
 against a `configure.ac` that no longer exists, `build-aux/style-check.pl` was
