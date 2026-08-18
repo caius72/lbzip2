@@ -3,9 +3,10 @@
 > **Fork notice.** This is a fork of [kjn/lbzip2](https://github.com/kjn/lbzip2),
 > created on 2026-08-17 from upstream commit `724352c`, because upstream is
 > unmaintained -- Homebrew disabled its lbzip2 formula on 2025-07-07 for that
-> reason and removed it on 2026-07-08. Changes made in this fork are described in [CHANGES.md](CHANGES.md)
-> and recorded in the git history. It remains free software under the GNU General
-> Public License, version 3 or later; see COPYING.
+> reason and removed it on 2026-07-08. Changes made in this fork are described
+> in [CHANGES.md](CHANGES.md) and recorded in the git history. It remains free
+> software under the GNU General Public License, version 3 or later; see
+> COPYING.
 
 Copyright (C) 2011, 2012, 2013, 2014, 2015 Mikolaj Izdebski  
 Copyright (C) 2008, 2009, 2010 Laszlo Ersek
