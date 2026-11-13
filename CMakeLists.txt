@@ -92,6 +92,25 @@ enable_testing()
 add_executable(driver tests/driver.c)
 add_executable(minbzcat tests/minbzcat.c)
 
+# The buffer interface, built from the codec without the rest of the tool, as
+# a program embedding it would build it.
+add_executable(buffer tests/buffer.c src/buffer.c src/buffer_pthread.c
+        src/crctab.c src/decode.c src/divbwt.c src/encode.c src/parse.c)
+target_link_libraries(buffer PRIVATE Threads::Threads)
+# The fuzz suites are a thousand files, so their output is compressed again
+# only at the default level; the hand-made ones also at the smallest blocks.
+# tests/buffer.c covers every level on inputs of its own.
+foreach(suite_levels manual-compress:19 manual-expand:19 fuzz-collect:9
+        fuzz-divbwt:9)
+    string(REPLACE ":" ";" suite_levels "${suite_levels}")
+    list(GET suite_levels 0 suite)
+    list(GET suite_levels 1 levels)
+    string(REPLACE "-" "_" suite_safe "${suite}")
+    add_test(NAME buffer_${suite_safe}
+            COMMAND buffer ${CMAKE_SOURCE_DIR}/tests/suite/${suite} ${levels})
+endforeach()
+add_test(NAME buffer_synthetic COMMAND buffer synthetic)
+
 file(GLOB_RECURSE bz2_files_compress RELATIVE ${CMAKE_SOURCE_DIR}
         tests/suite/manual-compress/*.bz2
         tests/suite/fuzz-collect/*.bz2
