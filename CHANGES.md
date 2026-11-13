@@ -15,6 +15,45 @@ Nothing here alters the bzip2 format.  Every version below produces and
 consumes exactly the same bytes as upstream, and the 1111-case test suite
 passes on every supported platform.
 
+## Unreleased
+
+A buffer-to-buffer interface, `src/buffer.h`, for programs that embed the
+codec rather than run the tool -- benchmarks such as
+[lzbench](https://github.com/inikep/lzbench), which carries lbzip2's codec
+and until now had to drive `collect()`, `encode()`, `retrieve()` and the rest
+itself, one block after another.  `lbzip2_compress_buffer()` and
+`lbzip2_expand_buffer()` take whole buffers, and spread the blocks over
+threads the way the tool does: compression collects blocks in order and
+encodes them in parallel, and decompression searches the input for block
+headers with `scan()`, decompresses the blocks it finds in parallel, and
+follows the stream with `parse()` to take each block's result in order, so
+that data which only looks like a block header changes nothing.
+
+The threads come from an executor the caller passes in -- two callbacks,
+`submit()` and `wait()` -- so a program can use its own threads, and one
+without POSIX threads, such as a MinGW build with Windows threads, can use
+the interface at all.  `src/buffer_pthread.c` is an executor on POSIX
+threads, kept apart from `src/buffer.c` for that reason.  Neither needs
+anything of the tool but `xmalloc()`.
+
+The output is the same for any executor and any number of threads, and the
+same as the tool writes: by default the input is taken a block size at a
+time, as the tool reads it, and `LBZIP2_SEQUENTIAL` fills every block first,
+as `-u` does.  Over `silesia.tar` (212 MB) at `-9`, on an AMD EPYC 9554,
+both built `-O3 -DNDEBUG`, the interface compresses at 27.9 MB/s on one
+thread and 441 MB/s on 32, and decompresses at 55 MB/s and 1072 MB/s; the
+tool itself, at `-n1` and `-n32`, does 27.7 and 571 MB/s, and 58 and
+1197 MB/s.
+
+`tests/buffer.c` holds the interface to the tool: every file of the suite is
+decompressed, and what decompresses is compressed again, by default and as
+with `-u`, without an executor, on four threads, and on an executor that
+declines every other task, and each result must be the tool's, byte for
+byte, or be rejected where the tool rejects it.  Inputs of its own add many
+blocks at every level, empty input, concatenated streams, trailing garbage,
+trailing blocks, truncation, corruption and short output buffers.  It adds
+five tests, about a minute of a Debug build.
+
 ## 2.6.5
 
 Compression is 5 to 6% faster on real data, with no change to the bytes it
